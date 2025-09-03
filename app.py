@@ -138,7 +138,16 @@ def place_order():
         return jsonify({"error": "Failed to send notification email."}), 500
 
 # --- Main execution block ---
+# --- Root Route ---
+@app.route("/")
+def home():
+    return jsonify({"message": "Welcome to GrillGrade API 🚀"})
+
+
+# --- Main execution block ---
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, port=5000)
+
+
