@@ -1,4 +1,4 @@
-# app.py - FINAL CORRECTED VERSION
+# app.py - FINAL DEPLOYMENT VERSION
 
 import os
 import smtplib
@@ -16,26 +16,24 @@ app = Flask(__name__)
 # Enable Cross-Origin Resource Sharing
 CORS(app)
 
-# --- CORRECTED: Database Configuration with Absolute Path ---
-# This gets the absolute path of the directory where app.py is located
+# --- Database Configuration with Absolute Path ---
+# This ensures the path works correctly on Render's filesystem
 basedir = os.path.abspath(os.path.dirname(__file__))
 instance_path = os.path.join(basedir, 'instance')
-# Create the directory if it doesn't exist
-os.makedirs(instance_path, exist_ok=True)
+os.makedirs(instance_path, exist_ok=True) # Create the directory if it doesn't exist
 
-# Use the new absolute path for the database
+# Configure the database URI to point to the 'instance' folder
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(instance_path, "restaurant.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# --- CORRECTED: Database Models (with proper indentation) ---
+
+# --- Database Models ---
 class RestaurantTable(db.Model):
-    # These lines MUST be indented
     id = db.Column(db.Integer, primary_key=True)
     capacity = db.Column(db.Integer, nullable=False)
 
 class Booking(db.Model):
-    # These lines MUST be indented
     id = db.Column(db.Integer, primary_key=True)
     table_id = db.Column(db.Integer, db.ForeignKey('restaurant_table.id'), nullable=False)
     customer_name = db.Column(db.String(100), nullable=False)
@@ -44,7 +42,37 @@ class Booking(db.Model):
     booking_time = db.Column(db.String(20), nullable=False)
     __table_args__ = (db.UniqueConstraint('table_id', 'booking_date', 'booking_time', name='_table_date_time_uc'),)
 
-# --- Your Existing Email Configuration & Function (No Changes) ---
+
+# --- MERGED: Database Initialization for Render ---
+# This function creates and populates the database only if it doesn't already exist.
+def init_db():
+    print("Checking and initializing database...")
+    db_path = os.path.join(instance_path, "restaurant.db")
+    
+    # Check if the database file already exists on the persistent disk
+    if not os.path.exists(db_path):
+        print("Database not found. Creating and populating...")
+        db.create_all()
+
+        # Add some default restaurant tables so bookings can be made
+        table1 = RestaurantTable(capacity=2)
+        table2 = RestaurantTable(capacity=4)
+        table3 = RestaurantTable(capacity=4)
+        table4 = RestaurantTable(capacity=6)
+        table5 = RestaurantTable(capacity=8)
+
+        db.session.add_all([table1, table2, table3, table4, table5])
+        db.session.commit()
+        print("Database created and populated successfully.")
+    else:
+        print("Database already exists on persistent disk.")
+
+# Run the initialization logic when the app starts
+with app.app_context():
+    init_db()
+
+
+# --- Email Configuration & Function ---
 EMAIL_USER = os.getenv('EMAIL_USER')
 EMAIL_PASS = os.getenv('EMAIL_PASS')
 RECIPIENT_EMAIL = 'donsavio1one@gmail.com'
@@ -70,7 +98,13 @@ def send_email(subject, body):
         print(f"Failed to send email. Error: {e}")
         return False
 
-# --- /book_table Route with Database Logic ---
+
+# --- API Routes ---
+
+@app.route("/")
+def home():
+    return jsonify({"message": "Welcome to GrillGrade API 🚀. The booking system is active."})
+
 @app.route('/book_table', methods=['POST'])
 def book_table():
     data = request.get_json()
@@ -109,7 +143,6 @@ def book_table():
         print(f"Database or Email error: {e}")
         return jsonify({"message": "Could not process booking due to a server error."}), 500
 
-# --- Your Existing /place_order Route (No Changes) ---
 @app.route('/place_order', methods=['POST'])
 def place_order():
     data = request.get_json()
@@ -137,17 +170,4 @@ def place_order():
     else:
         return jsonify({"error": "Failed to send notification email."}), 500
 
-# --- Main execution block ---
-# --- Root Route ---
-@app.route("/")
-def home():
-    return jsonify({"message": "Welcome to GrillGrade API 🚀"})
-
-
-# --- Main execution block ---
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True, port=5000)
-
-
+# Note: The `if __name__ == '__main__':` block is removed as it's not used by Gunicorn on Render.
