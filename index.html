@@ -214,6 +214,9 @@
 
     <script type="module">
         const appRoot = document.getElementById('app-root');
+        // --- ✅ CORRECTED: Define Backend URL ---
+        const API_BASE = "https://grillgrade-5.onrender.com";
+
         let state = {
             currentPage: 'landing',
             cart: [],
@@ -320,8 +323,8 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = loadingSpinner('Confirming...');
             try {
-                // MODIFIED LINE BELOW
-                const response = await fetch('http://127.0.0.1:5000/book_table', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                // ✅ CORRECTED: Use Render API URL
+                const response = await fetch(`${API_BASE}/book_table`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
                 if (!response.ok) throw new Error('Server error');
                 setState({ alert: { title: 'Booking Confirmed!', message: `Thank you, ${data.name}. Your table for ${data.guests} is booked.`, isSuccess: true, nextPage: 'landing' }});
             } catch (error) {
@@ -344,8 +347,8 @@
             const totalPrice = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
             const orderDetailsString = state.cart.map(item => `\n- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)} each)`).join('');
             try {
-                // MODIFIED LINE BELOW
-                const response = await fetch('http://127.0.0.1:5000/place_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: data.customerName, phone: data.customerPhone, address: data.customerAddress, orderDetails: orderDetailsString, totalPrice: totalPrice.toFixed(2) }) });
+                // ✅ CORRECTED: Use Render API URL
+                const response = await fetch(`${API_BASE}/place_order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: data.customerName, phone: data.customerPhone, address: data.customerAddress, orderDetails: orderDetailsString, totalPrice: totalPrice.toFixed(2) }) });
                 if (!response.ok) throw new Error('Server error');
                  setState({ alert: { title: 'Order Confirmed!', message: `Thank you, ${data.customerName}. Your order has been placed.`, isSuccess: true, nextPage: 'landing' } });
             } catch (error) {
